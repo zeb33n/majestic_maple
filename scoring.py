@@ -1,4 +1,6 @@
 from typing import Dict, List, Tuple
+from itertools import combinations
+import math
 
 # Type hints for better readability
 Species = str
@@ -7,6 +9,14 @@ Card = Tuple[Species, Rank]
 Coord = Tuple[int, int]
 PlayArea = Dict[str, Dict[str, Card]]
 Path = List[Card]
+
+ALL_CARDS = set(
+    [
+        (species, num)
+        for species in ["J", "R", "C", "M", "O", "W"]
+        for num in range(1, 9)
+    ]
+)
 
 
 def card_string(card: Card) -> str:
@@ -160,22 +170,94 @@ def calculate_all_scores(play_area: PlayArea) -> Dict[Species, int]:
     return final_scores
 
 
-def calculate_scoring_probability():
-    pass
+def calculate_scoring_probability(species: Species, state: dict) -> float:
+    seen_cards = (
+        state["hand"]
+        + state["opponentHand"]
+        + state["discard"]
+        + state["opponentDiscard"]
+        + list(y for x in state["playArea"].values() for y in x.values())
+        + list(y for x in state["opponentPlayArea"].values() for y in x.values())
+    )
+
+    unknown_cards = ALL_CARDS - {tuple(card) for card in seen_cards if not card is None}
+    num_unknown_cards_op = state["opponentHand"].count(None)
+    possible_missing_cards_combos = list(
+        combinations(unknown_cards, num_unknown_cards_op)
+    )
+    my_score = calc_hand_score(species, state["hand"])
+    probs = []
+    print(state["hand"])
+    print(state["opponentHand"])
+    print(unknown_cards)
+    for combo in possible_missing_cards_combos:
+        op_hand = [card for card in state["opponentHand"] if not card is None] + list(
+            combo
+        )
+        if my_score < calc_hand_score(species, op_hand):
+            probs.append(1 / len(possible_missing_cards_combos))
+    return sum(probs)
+
+
+def calc_hand_score(species: Species, hand: list[Card]) -> int:
+    return sum([card[1] for card in hand if card[0] == species])
 
 
 def calc_prob_opponent_has_card_in_hand(card: Card, state: dict) -> float:
     seen_cards_not_op_hand = (
         state["hand"]
-        + list(state["playArea"].values())
-        + list(state["opponentPlayArea"].values())
+        + list(y for x in state["playArea"].values() for y in x.values())
+        + list(y for x in state["opponentPlayArea"].values() for y in x.values())
     )
     seen_cards_op_hand = state["opponentHand"]
+    deck_size = state["deck"]
+
+    if card in seen_cards_not_op_hand:
+        return 0
+    if card in seen_cards_op_hand:
+        return 1
+    num_unknown_cards_op_hand = state["opponentHand"].count(None)
+    return num_unknown_cards_op_hand / (deck_size + num_unknown_cards_op_hand)
 
 
 # --- Execution ---
 if __name__ == "__main__":
     # Your input dictionary
+    #
+    test_state = {
+        "deck": 2,
+        "hand": [["R", 1], ["J", 3], ["R", 4], ["J", 5], ["O", 4], ["J", 4], ["R", 3]],
+        "discard": [],
+        "opponentDiscard": [["C", 5], ["R", 5]],
+        "playArea": {
+            "0": {"0": ["W", 2], "1": ["C", 6], "2": ["R", 7], "-1": ["M", 8]},
+            "1": {"0": ["O", 6], "1": ["M", 4], "2": ["O", 1], "-1": ["O", 5]},
+            "2": {"0": ["J", 2], "1": ["J", 6], "-1": ["M", 2]},
+            "-1": {"0": ["R", 6], "1": ["C", 4], "-1": ["C", 3]},
+            "-2": {"1": ["C", 2]},
+        },
+        "opponentPlayArea": {
+            "0": {"0": ["W", 8], "-1": ["R", 2]},
+            "1": {"0": ["O", 2]},
+            "-1": {"0": ["M", 6], "1": ["O", 8], "2": ["M", 7]},
+            "-2": {"0": ["W", 6], "1": ["W", 4], "2": ["J", 7], "-1": ["J", 8]},
+            "-3": {
+                "0": ["M", 3],
+                "1": ["W", 7],
+                "2": ["M", 5],
+                "-1": ["C", 7],
+                "-2": ["W", 3],
+            },
+        },
+        "opponentHand": [None, ["W", 5], ["R", 8], None, None, ["C", 1], ["C", 8]],
+        "turn": 30,
+        "subTurn": 0,
+        "previousTurn": {"move": ["R", 5], "metaData": False},
+    }
+
+    for s in ["J", "R", "C", "M", "O", "W"]:
+        print(s)
+        print(calculate_scoring_probability(s, test_state))
     player_arboretum = {
         "0": {
             "0": ["C", 1],
@@ -202,6 +284,7 @@ if __name__ == "__main__":
     }
 
     # Calculate and print the scores
+
     scores = calculate_all_scores(player_arboretum)
 
     print("\n--- Final Scores ---")
