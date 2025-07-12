@@ -187,9 +187,6 @@ def calculate_scoring_probability(species: Species, state: dict) -> float:
     )
     my_score = calc_hand_score(species, state["hand"])
     probs = []
-    print(state["hand"])
-    print(state["opponentHand"])
-    print(unknown_cards)
     for combo in possible_missing_cards_combos:
         op_hand = [card for card in state["opponentHand"] if not card is None] + list(
             combo
@@ -218,6 +215,14 @@ def calc_prob_opponent_has_card_in_hand(card: Card, state: dict) -> float:
         return 1
     num_unknown_cards_op_hand = state["opponentHand"].count(None)
     return num_unknown_cards_op_hand / (deck_size + num_unknown_cards_op_hand)
+
+
+def get_weighted_scores(state: dict) -> dict[Species, float]:
+    scores = calculate_all_scores(state["playArea"])
+    return {
+        species: score * calculate_scoring_probability(species, state)
+        for species, score in scores.items()
+    }
 
 
 # --- Execution ---
