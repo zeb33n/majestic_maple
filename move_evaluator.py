@@ -1,127 +1,111 @@
 import copy
+import random
 from typing import List, Dict
 
 from data_structures import Card, Move
 from placement import get_valid_placements
-# We will assume scoring.py has these functions.
-# We will create placeholder functions here for now.
-# from scoring import calculate_total_path_score, calculate_discard_cost
-
-# Placeholder scoring functions for standalone testing
-def calculate_total_path_score(tableau: Dict) -> int:
-    """Placeholder for the real path scoring function."""
-    # A simple heuristic: number of cards in tableau
-    return sum(len(y_dict) for y_dict in tableau.values())
-
-def calculate_discard_cost(opponent_tableau: Dict, discard_card: Card) -> int:
-    """Placeholder for the real discard cost function."""
-    # A simple heuristic: returns the value of the card, making high cards costly to discard
-    return discard_card.value
+from scoring import get_weighted_scores
 
 
-def find_best_move(hand: List[Card], tableau: Dict, opponent_tableau: Dict) -> Move:
+def find_best_play(hand: List[Card], tableau: Dict) -> Move:
     """
-    Analyzes all possible moves and returns the one with the highest score.
-
-    A move consists of playing a card to the tableau and discarding another.
-    The score is calculated as:
-    (score of new tableau) - (score of current tableau) - (cost of discard)
+    Analyzes all possible card placements and returns the one that yields
+    the highest weighted score improvement. The discard choice is random.
     """
     best_move = None
-    best_score = -float('inf')
+    best_score_improvement = -float('inf')
 
-    current_tableau_score = calculate_total_path_score(tableau)
+    # The scoring function requires a full state dictionary. We build a
+    # simplified one with the data we have.
+    def build_state(current_hand, current_tableau):
+        # Convert hand and tableau to the tuple format expected by scoring.py
+        hand_tuples = [(c.species, c.value) for c in current_hand]
+        tableau_tuples = {
+            x: {y: (card.species, card.value) for y, card in y_dict.items()}
+            for x, y_dict in current_tableau.items()
+        }
+        return {
+            "hand": hand_tuples,
+            "playArea": tableau_tuples,
+            # Provide empty/default values for other required keys
+            "opponentHand": [],
+            "discard": [],
+            "opponentDiscard": [],
+            "opponentPlayArea": {},
+            "deck": 0
+        }
+
+    base_state = build_state(hand, tableau)
+    base_score = sum(get_weighted_scores(base_state).values())
+    
     valid_placements = get_valid_placements(tableau)
 
-    # Loop 1: Iterate through each card in hand to consider it for playing
     for i, play_card in enumerate(hand):
-        
-        # Create the remaining hand after selecting a play_card
         remaining_hand = hand[:i] + hand[i+1:]
+        if not remaining_hand:
+            continue
         
-        # Loop 2: Iterate through all valid placements on the board
         for placement in valid_placements:
-            
-            # Create a hypothetical new tableau with the card placed
             hypothetical_tableau = copy.deepcopy(tableau)
             x, y = placement
             if x not in hypothetical_tableau:
                 hypothetical_tableau[x] = {}
             hypothetical_tableau[x][y] = play_card
             
-            new_tableau_score = calculate_total_path_score(hypothetical_tableau)
-            path_improvement_score = new_tableau_score - current_tableau_score
+            # After playing a card, the hand for the next state is the remaining hand
+            hypothetical_state = build_state(remaining_hand, hypothetical_tableau)
+            
+            new_weighted_scores = get_weighted_scores(hypothetical_state)
+            new_score = sum(new_weighted_scores.values())
+            
+            score_improvement = new_score - base_score
 
-            # Loop 3: Iterate through remaining cards to consider for discarding
-            for discard_card in remaining_hand:
-                
-                discard_penalty = calculate_discard_cost(opponent_tableau, discard_card)
-                
-                current_score = path_improvement_score - discard_penalty
+            if score_improvement > best_score_improvement:
+                best_score_improvement = score_improvement
+                discard_card = random.choice(remaining_hand)
+                best_move = Move(play_card, placement, discard_card)
 
-                if current_score > best_score:
-                    best_score = current_score
-                    best_move = Move(play_card, placement, discard_card)
+    if best_move is None and hand:
+        play_card = random.choice(hand)
+        remaining_hand = [c for c in hand if c != play_card]
+        if remaining_hand and valid_placements:
+            discard_card = random.choice(remaining_hand)
+            placement = random.choice(valid_placements)
+            best_move = Move(play_card, placement, discard_card)
 
     return best_move
 
 
 if __name__ == '__main__':
-    # This block allows for standalone testing of the move evaluator.
-    # It uses the sample data from the game_engine_reference.md.
-    print("--- Running Move Evaluator Standalone Test ---")
+    print("--- Running Move Evaluator Standalone Test (with real scoring) ---")
 
-    # Player's hand (9 cards, must play 1 and discard 1)
-    sample_hand = [
-        Card("J", 8), Card("R", 5), Card("C", 7), Card("M", 2), Card("M", 6),
-        Card("O", 1), Card("O", 8), Card("W", 4), Card("W", 7)
-    ]
+    test_state_data = {
+        "hand": [["R", 1], ["J", 3], ["R", 4], ["J", 5], ["O", 4], ["J", 4], ["R", 3]],
+        "playArea": {
+            "0": {"0": ["W", 2], "1": ["C", 6], "2": ["R", 7], "-1": ["M", 8]},
+            "1": {"0": ["O", 6], "1": ["M", 4], "2": ["O", 1], "-1": ["O", 5]},
+            "2": {"0": ["J", 2], "1": ["J", 6], "-1": ["M", 2]},
+            "-1": {"0": ["R", 6], "1": ["C", 4], "-1": ["C", 3]},
+            "-2": {"1": ["C", 2]},
+        },
+    }
 
-    # Player's current tableau
+    sample_hand = [Card(s, v) for s, v in test_state_data["hand"]]
     sample_tableau = {
-        -1: {
-            -1: Card("W", 3),
-            0: Card("J", 4),
-            1: Card("O", 6)
-        },
-        0: {
-            0: Card("C", 2),
-            1: Card("O", 5)
-        },
-        1: {
-            0: Card("J", 3)
-        }
+        x: {y: Card(c[0], c[1]) for y, c in y_dict.items()}
+        for x, y_dict in test_state_data["playArea"].items()
     }
 
-    # Opponent's tableau (for discard cost calculations)
-    sample_opponent_tableau = {
-        0: {
-            0: Card("M", 4),
-            1: Card("J", 1),
-            2: Card("O", 2)
-        },
-        1: {
-            0: Card("M", 3),
-            1: Card("O", 5),
-            2: Card("J", 4)
-        },
-        2: {
-            1: Card("O", 3)
-        }
-    }
-
-    print(f"Initial hand size: {len(sample_hand)}")
-    print(f"Initial tableau card count: {sum(len(y) for y in sample_tableau.values())}")
+    print(f"Hand: {[f'{c.species}{c.value}' for c in sample_hand]}")
     
-    # Find the best move
-    best_move_found = find_best_move(sample_hand, sample_tableau, sample_opponent_tableau)
+    best_play_found = find_best_play(sample_hand, sample_tableau)
 
-    if best_move_found:
-        print("\nBest move found:")
-        print(f"  Play Card: {best_move_found.play_card.species}{best_move_found.play_card.value}")
-        print(f"  Placement: {best_move_found.placement}")
-        print(f"  Discard Card: {best_move_found.discard_card.species}{best_move_found.discard_card.value}")
+    if best_play_found:
+        print("\nBest play found:")
+        print(f"  Play Card: {best_play_found.play_card.species}{best_play_found.play_card.value}")
+        print(f"  Placement: {best_play_found.placement}")
+        print(f"  Discard Card (Random): {best_play_found.discard_card.species}{best_play_found.discard_card.value}")
     else:
-        print("\nNo valid move was found.")
+        print("\nNo valid play was found.")
 
     print("\n--- Test Complete ---")
