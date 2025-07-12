@@ -1,0 +1,19 @@
+# Core mathematical computing
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Fast array operations and numerical computing
+numba>=0.58.0
+
+# Statistics and probability distributions
+statsmodels>=0.14.0
+
+# Machine learning and optimization
+scikit-learn>=1.3.0
+
+# Optional: Fast linear algebra
+# Uncomment if needed for more advanced optimizations
+# intel-mkl>=2023.0.0
+
+# Optional: GPU acceleration (if GPU available in container)
+# cupy-cuda11x>=12.0.0

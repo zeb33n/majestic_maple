@@ -290,3 +290,95 @@ This reference enables you to:
 4. **Convert results** back to JSON for the game engine
 
 The data structures and logic described here are directly compatible with the main repository's game engine and should be used as the authoritative reference for all bot implementations.
+
+## Full GameState Object Example
+
+This section provides a complete example of the gameState object as received from the game engine, representing the state at the start of Turn 6 where Player A is about to make their first draw (subTurn: 0). The previous action was Player B discarding the card ["J", 2].
+
+### Complete JSON GameState
+
+```json
+{
+  "deck": [
+    ["R", 2], ["C", 1], ["M", 1], ["W", 1], ["J", 1], ["O", 4],
+    ["R", 3], ["C", 3], ["M", 3], ["W", 3], ["J", 5], ["O", 5],
+    ["R", 4], ["C", 5], ["M", 5], ["W", 5], ["J", 6], ["O", 7],
+    ["R", 6], ["C", 6], ["M", 7], ["W", 6], ["J", 7], ["O", 3],
+    ["R", 7], ["C", 8], ["M", 8], ["W", 8]
+  ],
+  "handA": [
+    ["W", 2], ["R", 8], ["C", 4], ["J", 4],
+    ["M", 2], ["O", 2], ["W", 4]
+  ],
+  "handB": [
+    ["R", 1], ["C", 2], ["M", 6], ["W", 7],
+    ["O", 6], ["J", 3], ["M", 4]
+  ],
+  "discardA": [
+    ["C", 3]
+  ],
+  "discardB": [
+    ["J", 2]
+  ],
+  "playAreaA": {
+    "0": {
+      "0": ["W", 5]
+    },
+    "1": {
+      "0": ["W", 6]
+    }
+  },
+  "playAreaB": {
+    "0": {
+      "0": ["J", 8]
+    },
+    "-1": {
+      "0": ["O", 8]
+    }
+  },
+  "seenA": [
+    "W2", "R8", "C4", "J4", "M2", "O2", "W4", "C3", "J8", "O8", "J2"
+  ],
+  "seenB": [
+    "R1", "C2", "M6", "W7", "O6", "J3", "M4", "J2", "W5", "W6", "C3"
+  ],
+  "turn": 6,
+  "subTurn": 0,
+  "currentPlayer": 0,
+  "opponent": "Player B",
+  "previousTurn": ["J", 2],
+  "previousTurnMetaData": false,
+  "playBack": false
+}
+```
+
+### Key Fields Breakdown for move_evaluator.py
+
+#### Player Data
+- **hand**: Use `handA` as input for your `find_best_move` function. Note that after simulating drawing two cards, this hand would temporarily have 9 cards before evaluating play/discard combinations.
+- **tableau**: Corresponds to `playAreaA`. Pass this to `get_valid_placements` and scoring functions.
+- **discard**: Player's discard pile (`discardA`).
+
+#### Opponent Information
+For calculating `discard_cost` and other opponent-aware heuristics:
+- **Opponent tableau**: Available as `playAreaB`
+- **Opponent hand**: `handB` would be filtered in a real game to show only known cards
+- **All discard piles**: Both `discardA` and `discardB` are visible
+- **Seen cards**: `seenA` and `seenB` track what each player has observed
+
+#### Game State Metadata
+- **turn**: Current turn number
+- **subTurn**: Phase within the turn (0=draw, 1=draw, 2=play, 3=discard)
+- **currentPlayer**: Index of active player (0=A, 1=B)
+- **deck**: Remaining cards in draw pile
+- **previousTurn**: Last action taken
+
+#### MCTS Context Usage
+This complete state object shows the ground truth that your MCTS bot would be trying to estimate or "determinize" during simulations. In a real game:
+
+1. **Perfect Information**: You can see your own hand, tableau, and discard pile
+2. **Imperfect Information**: Opponent's hand would be partially hidden (shown as `null` values)
+3. **Public Information**: All tableaus, discard piles, and deck count are visible
+4. **Seen Cards**: Track what cards have been observed from opponent actions
+
+This example provides sufficient detail for building robust test harnesses and accurately modeling game state within your Python MCTS implementation.
