@@ -1,6 +1,12 @@
 from typing import Dict, List, Tuple
 from itertools import combinations
-import math
+import sys
+
+
+def eprint(*args, **kwargs):
+    """Prints to stderr."""
+    print(*args, file=sys.stderr, **kwargs)
+
 
 # Type hints for better readability
 Species = str
@@ -163,13 +169,15 @@ def calculate_all_scores(play_area: PlayArea) -> Dict[Species, int]:
     all_species = ["J", "R", "C", "M", "O", "W"]
     final_scores = {}
 
-    print("Calculating scores for the provided Arboretum...")
     for species in all_species:
         final_scores[species] = score_play_area(play_area, species)
 
     return final_scores
 
 
+# lru caching
+# ok :)
+# only weight scores towards end of game
 def calculate_scoring_probability(species: Species, state: dict) -> float:
     seen_cards = (
         state["hand"]
@@ -182,17 +190,17 @@ def calculate_scoring_probability(species: Species, state: dict) -> float:
 
     unknown_cards = ALL_CARDS - {tuple(card) for card in seen_cards if not card is None}
     num_unknown_cards_op = state["opponentHand"].count(None)
-    possible_missing_cards_combos = list(
-        combinations(unknown_cards, num_unknown_cards_op)
-    )
+
+    pos_comb = list(combinations(unknown_cards, num_unknown_cards_op))
+
     my_score = calc_hand_score(species, state["hand"])
     probs = []
-    for combo in possible_missing_cards_combos:
+    for combo in combinations(unknown_cards, num_unknown_cards_op):
         op_hand = [card for card in state["opponentHand"] if not card is None] + list(
             combo
         )
         if my_score < calc_hand_score(species, op_hand):
-            probs.append(1 / len(possible_missing_cards_combos))
+            probs.append(1 / len(pos_comb))
     return sum(probs)
 
 
@@ -200,27 +208,14 @@ def calc_hand_score(species: Species, hand: list[Card]) -> int:
     return sum([card[1] for card in hand if card[0] == species])
 
 
-def calc_prob_opponent_has_card_in_hand(card: Card, state: dict) -> float:
-    seen_cards_not_op_hand = (
-        state["hand"]
-        + list(y for x in state["playArea"].values() for y in x.values())
-        + list(y for x in state["opponentPlayArea"].values() for y in x.values())
-    )
-    seen_cards_op_hand = state["opponentHand"]
-    deck_size = state["deck"]
-
-    if card in seen_cards_not_op_hand:
-        return 0
-    if card in seen_cards_op_hand:
-        return 1
-    num_unknown_cards_op_hand = state["opponentHand"].count(None)
-    return num_unknown_cards_op_hand / (deck_size + num_unknown_cards_op_hand)
-
-
 def get_weighted_scores(state: dict) -> dict[Species, float]:
     scores = calculate_all_scores(state["playArea"])
     return {
-        species: score * calculate_scoring_probability(species, state)
+        species: (
+            score * calculate_scoring_probability(species, state)
+            if state["deck"] < 10
+            else score
+        )
         for species, score in scores.items()
     }
 
@@ -229,6 +224,18 @@ def get_weighted_scores(state: dict) -> dict[Species, float]:
 if __name__ == "__main__":
     # Your input dictionary
     #
+    test_state_2 = {
+        "deck": 34,
+        "hand": [["O", 4], ["O", 3], ["M", 7], ["R", 4], ["W", 1], ["C", 5], ["J", 2]],
+        "discard": [],
+        "opponentDiscard": [],
+        "playArea": {},
+        "opponentPlayArea": {},
+        "opponentHand": [None, None, None, None, None, None, None],
+        "turn": 0,
+        "subTurn": 0,
+        "previousTurn": {"move": False, "metaData": False},
+    }
     test_state = {
         "deck": 2,
         "hand": [["R", 1], ["J", 3], ["R", 4], ["J", 5], ["O", 4], ["J", 4], ["R", 3]],
@@ -259,10 +266,17 @@ if __name__ == "__main__":
         "subTurn": 0,
         "previousTurn": {"move": ["R", 5], "metaData": False},
     }
+    from time import time
 
     for s in ["J", "R", "C", "M", "O", "W"]:
-        print(s)
         print(calculate_scoring_probability(s, test_state))
+        import time
+
+        start = time.time()
+        print(calculate_scoring_probability(s, test_state_2))
+        end = time.time()
+        print(f"{end - start}")
+
     player_arboretum = {
         "0": {
             "0": ["C", 1],
@@ -291,8 +305,3 @@ if __name__ == "__main__":
     # Calculate and print the scores
 
     scores = calculate_all_scores(player_arboretum)
-
-    print("\n--- Final Scores ---")
-    for species, score in scores.items():
-        print(f"Species {species}: {score} points")
-    print("--------------------")
