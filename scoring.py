@@ -178,6 +178,8 @@ def calculate_all_scores(play_area: PlayArea) -> Dict[Species, int]:
 # lru caching
 # ok :)
 # only weight scores towards end of game
+# suit supersistion?
+# squich all cards compose
 def calculate_scoring_probability(species: Species, state: dict) -> float:
     seen_cards = (
         state["hand"]
@@ -268,14 +270,13 @@ if __name__ == "__main__":
     }
     from time import time
 
-    for s in ["J", "R", "C", "M", "O", "W"]:
-        print(calculate_scoring_probability(s, test_state))
-        import time
-
-        start = time.time()
-        print(calculate_scoring_probability(s, test_state_2))
-        end = time.time()
-        print(f"{end - start}")
+    # for s in ["J", "R", "C", "M", "O", "W"]:
+    #     print(calculate_scoring_probability(s, test_state))
+    #     import time
+    #     start = time.time()
+    #     print(calculate_scoring_probability(s, test_state_2))
+    #     end = time.time()
+    #     print(f"{end - start}")
 
     player_arboretum = {
         "0": {
@@ -297,7 +298,7 @@ if __name__ == "__main__":
             "1": ["C", 4],
             "2": ["W", 5],
             "-2": ["J", 4],
-            "-1": ["R", 8],
+            "-1": ["R", 7],
         },
         "-1": {"-2": ["J", 7]},
     }
@@ -305,3 +306,4 @@ if __name__ == "__main__":
     # Calculate and print the scores
 
     scores = calculate_all_scores(player_arboretum)
+    # print(scores)
