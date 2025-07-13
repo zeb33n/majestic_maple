@@ -33,16 +33,12 @@ def get_best_play(state: dict) -> tuple[tuple[str, int], tuple[int, int]]:
 
 
 def place(data: dict):
-    if not data["state"]["activeTurn"]:
-        output = {"move": "RANDOM", "messageID": data["messageID"]}
-        print(json.dumps(output))
-    else:
-        card, coord = get_best_play(data["state"])
-        output = {
-            "move": {"card": card, "coord": coord},
-            "messageID": data["messageID"],
-        }
-        print(json.dumps(output))
+    card, coord = get_best_play(data["state"])
+    output = {
+        "move": {"card": card, "coord": coord},
+        "messageID": data["messageID"],
+    }
+    print(json.dumps(output))
 
 
 if __name__ == "__main__":

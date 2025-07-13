@@ -1,7 +1,10 @@
 import json
 import sys
+
+from draw import draw
 from place import place, get_best_play
 from discard import get_discard_card
+
 
 
 def eprint(*args, **kwargs):
@@ -21,8 +24,8 @@ def beginReadLine():
                     randomIsh(data)
         except json.JSONDecodeError as e:
             eprint(f"Invalid JSON: {e}")
-        except Exception as e:
-            eprint(f"Exception: {e}")
+        # except Exception as e:
+        #     eprint(f"Exception: {e}")
 
 
 def startEndGame(data: dict):
@@ -63,11 +66,20 @@ def discard(data: dict):
 
 
 def randomIsh(data: dict):
-    match data["state"]["subTurn"]:
-        case 2:
-            place(data)
-        case 3:
-            discard(data)
-        case _:
-            output = {"move": "RANDOM", "messageID": data["messageID"]}
-            print(json.dumps(output))
+
+    if not data["state"]["activeTurn"]:
+        output = {"move": "RANDOM", "messageID": data["messageID"]}
+        print(json.dumps(output))
+    else:
+        match data["state"]["subTurn"]:
+            case 0 | 1:
+                draw(data)
+     
+            case 2:
+                 place(data)
+            case 3:
+                discard(data)
+            case _:
+                output = {"move": "RANDOM", "messageID": data["messageID"]}
+                print(json.dumps(output))
+

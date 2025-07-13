@@ -1,5 +1,12 @@
 from copy import deepcopy
 from scoring import get_weighted_scores
+import random
+
+
+def sample_cards(cards: set, N) -> set:
+    if N > len(cards):
+        return cards
+    return set(random.sample(list(cards), N))
 
 
 def get_valid_play_coordinates(play_area: dict) -> set[tuple[int, int]]:
