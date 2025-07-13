@@ -2,6 +2,7 @@ from utils import get_valid_play_coordinates, assess_card_placement, sample_card
 from scoring import ALL_CARDS
 import json
 import sys
+import magic
 
 
 def assess_draw(state: dict) -> int:
@@ -24,7 +25,7 @@ def assess_draw(state: dict) -> int:
         + list(y for x in state["opponentPlayArea"].values() for y in x.values())
     )
     unknown_cards = ALL_CARDS - {tuple(card) for card in seen_cards if not card is None}
-    lim_calcs = 125
+    lim_calcs = magic.DRAW_LIM_CALCS
     unknown_cards = sample_cards(unknown_cards, int(lim_calcs / len(coords)))
     unknown_card_scores = [assess_card(card, coords, state) for card in unknown_cards]
     avg = sum(unknown_card_scores) / len(unknown_card_scores)
