@@ -20,6 +20,8 @@ def beginReadLine():
                     randomIsh(data)
         except json.JSONDecodeError as e:
             eprint(f"Invalid JSON: {e}")
+        except Exception as e:
+            eprint(f"Exception: {e}")
 
 
 def startEndGame(data: dict):
