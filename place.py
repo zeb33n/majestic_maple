@@ -2,6 +2,8 @@ from utils import get_valid_play_coordinates, assess_card_placement
 import json
 import sys
 
+# Global cache for card scores
+cached_card_scores = []
 
 def eprint(*args, **kwargs):
     """Prints to stderr."""
@@ -9,15 +11,23 @@ def eprint(*args, **kwargs):
 
 
 def get_best_play(state: dict) -> tuple[tuple[str, int], tuple[int, int]]:
+    global cached_card_scores
     coords = get_valid_play_coordinates(state["playArea"])
     best_score = 0
     best_play = (state["hand"][0], list(coords)[0])
+    cached_card_scores = []  # Clear previous cache
+    
     for card in state["hand"]:
+        card_best_score = 0
         for coord in coords:
             score = assess_card_placement(card, coord, state)
+            if score > card_best_score:
+                card_best_score = score
             if score > best_score:
                 best_score = score
                 best_play = (card, coord)
+        # Cache the best score for this card
+        cached_card_scores.append((card, card_best_score))
 
     return best_play
 
