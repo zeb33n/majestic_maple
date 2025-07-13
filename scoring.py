@@ -1,4 +1,5 @@
 from typing import Dict, List, Tuple
+from collections import defaultdict
 from itertools import combinations
 import sys
 
@@ -180,6 +181,32 @@ def calculate_all_scores(play_area: PlayArea) -> Dict[Species, int]:
 # only weight scores towards end of game
 # suit supersistion?
 # squich all cards compose
+#
+def calculate_scoring_probability_squash(species: Species, state: dict) -> float:
+    seen_cards = (
+        state["hand"]
+        + state["opponentHand"]
+        + state["discard"]
+        + state["opponentDiscard"]
+        + list(y for x in state["playArea"].values() for y in x.values())
+        + list(y for x in state["opponentPlayArea"].values() for y in x.values())
+    )
+
+    unknown_cards = ALL_CARDS - {tuple(card) for card in seen_cards if not card is None}
+    num_unknown_cards_op = state["opponentHand"].count(None)
+    unknown_species_buckets = defaultdict(lambda: [0, 0])
+    for s, value in unknown_cards:
+        unknown_species_buckets[s][0] += value
+        unknown_species_buckets[s][1] += 1
+    score, count = unknown_species_buckets[species]
+    return (
+        score * count * (num_unknown_cards_op) / (len(unknown_cards))
+    ) * magic.SCORING_SQUASH_SCALE_FACTOR
+
+
+import magic
+
+
 def calculate_scoring_probability(species: Species, state: dict) -> float:
     seen_cards = (
         state["hand"]
@@ -192,6 +219,11 @@ def calculate_scoring_probability(species: Species, state: dict) -> float:
 
     unknown_cards = ALL_CARDS - {tuple(card) for card in seen_cards if not card is None}
     num_unknown_cards_op = state["opponentHand"].count(None)
+
+    from math import comb
+
+    if comb(len(unknown_cards), num_unknown_cards_op) > magic.SCORING_LIM_CALCS:
+        return calculate_scoring_probability_squash(species, state)
 
     pos_comb = list(combinations(unknown_cards, num_unknown_cards_op))
 
@@ -213,11 +245,7 @@ def calc_hand_score(species: Species, hand: list[Card]) -> int:
 def get_weighted_scores(state: dict) -> dict[Species, float]:
     scores = calculate_all_scores(state["playArea"])
     return {
-        species: (
-            score * calculate_scoring_probability(species, state)
-            if state["deck"] < 10
-            else score
-        )
+        species: (score * calculate_scoring_probability(species, state))
         for species, score in scores.items()
     }
 
