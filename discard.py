@@ -2,6 +2,7 @@ from copy import deepcopy
 import place
 from utils import get_valid_play_coordinates
 from scoring import get_weighted_scores
+from magic import DISCARD_CANDIDATE_COUNT
 import sys
 
 
@@ -89,7 +90,7 @@ def get_opponent_best_score_for_card(card, state):
     return best_score
 
 
-def get_discard_card(state, num_candidates=4):
+def get_discard_card(state, num_candidates=DISCARD_CANDIDATE_COUNT):
     """
     Determines the best card to discard using opponent simulation heuristic.
     
