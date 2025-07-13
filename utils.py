@@ -1,3 +1,7 @@
+from copy import deepcopy
+from scoring import get_weighted_scores
+
+
 def get_valid_play_coordinates(play_area: dict) -> set[tuple[int, int]]:
     """
     Calculates all valid empty coordinates adjacent to existing cards.
@@ -24,3 +28,19 @@ def get_valid_play_coordinates(play_area: dict) -> set[tuple[int, int]]:
                 empty_adjacent_coords.add(adj_coord)
 
     return empty_adjacent_coords
+
+
+def assess_card_placement(
+    card: tuple[str, int], coord: tuple[int, int], state: dict
+) -> float:
+    state_copy = deepcopy(state)
+    x_key = str(coord[0])
+    y_key = str(coord[1])
+    a = state_copy["playArea"].get(x_key)
+    if a is not None:
+        state_copy["playArea"][x_key][y_key] = card
+    else:
+        state_copy["playArea"][x_key] = {y_key: card}
+
+    weighted_scores = get_weighted_scores(state_copy)
+    return sum(weighted_scores.values())

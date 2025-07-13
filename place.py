@@ -1,6 +1,4 @@
-from copy import deepcopy
-from scoring import get_weighted_scores
-from utils import get_valid_play_coordinates
+from utils import get_valid_play_coordinates, assess_card_placement
 import json
 import sys
 
@@ -8,22 +6,6 @@ import sys
 def eprint(*args, **kwargs):
     """Prints to stderr."""
     print(*args, file=sys.stderr, **kwargs)
-
-
-def assess_card_placement(
-    card: tuple[str, int], coord: tuple[int, int], state: dict
-) -> float:
-    state_copy = deepcopy(state)
-    x_key = str(coord[0])
-    y_key = str(coord[1])
-    a = state_copy["playArea"].get(x_key)
-    if a is not None:
-        state_copy["playArea"][x_key][y_key] = card
-    else:
-        state_copy["playArea"][x_key] = {y_key: card}
-
-    weighted_scores = get_weighted_scores(state_copy)
-    return sum(weighted_scores.values())
 
 
 def get_best_play(state: dict) -> tuple[tuple[str, int], tuple[int, int]]:
