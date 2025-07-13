@@ -1,5 +1,6 @@
 import json
 import sys
+from draw import draw
 from place import place
 
 
@@ -20,8 +21,8 @@ def beginReadLine():
                     randomIsh(data)
         except json.JSONDecodeError as e:
             eprint(f"Invalid JSON: {e}")
-        except Exception as e:
-            eprint(f"Exception: {e}")
+        # except Exception as e:
+        #     eprint(f"Exception: {e}")
 
 
 def startEndGame(data: dict):
@@ -30,9 +31,15 @@ def startEndGame(data: dict):
 
 
 def randomIsh(data: dict):
-    match data["state"]["subTurn"]:
-        case 2:
-            place(data)
-        case _:
-            output = {"move": "RANDOM", "messageID": data["messageID"]}
-            print(json.dumps(output))
+    if not data["state"]["activeTurn"]:
+        output = {"move": "RANDOM", "messageID": data["messageID"]}
+        print(json.dumps(output))
+    else:
+        match data["state"]["subTurn"]:
+            case 0 | 1:
+                draw(data)
+            case 2:
+                place(data)
+            case _:
+                output = {"move": "RANDOM", "messageID": data["messageID"]}
+                print(json.dumps(output))
